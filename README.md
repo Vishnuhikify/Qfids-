@@ -1,310 +1,309 @@
-# Quantum Fingerprint Intrusion Detection System (QF-IDS)
+<div align="center">
 
-> **Quantum-Native Intrusion Defence · Detect · Divert · Encrypt**
+<!-- Animated Banner via capsule-render -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d0221,50:0a3d62,100:00d2ff&height=200&section=header&text=QF-IDS&fontSize=80&fontColor=00d2ff&fontAlignY=38&desc=Quantum%20Fingerprint%20Intrusion%20Detection%20System&descAlignY=58&descSize=20&descColor=ffffff&animation=fadeIn" width="100%"/>
+
+<!-- Typing animation -->
+<a href="https://git.io/typing-svg">
+  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&size=22&pause=1000&color=00D2FF&center=true&vCenter=true&width=700&lines=Quantum+Key+Distribution+%E2%80%A2+BB84+Protocol;IsolationForest+Anomaly+Detection;Real-Time+Attack+Detection+%26+Response;Multi-Tier+Quantum+Honeypot+Deception;Detect+%E2%80%A2+Divert+%E2%80%A2+Encrypt" alt="Typing SVG" />
+</a>
+
+<br/><br/>
+
+<!-- Badges Row 1 -->
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-IsolationForest-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+
+<!-- Badges Row 2 -->
+![Firebase](https://img.shields.io/badge/Firebase-Optional-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![WebSocket](https://img.shields.io/badge/WebSocket-Live_Stream-4A90E2?style=for-the-badge&logo=socket.io&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
+
+<br/>
+
+> **⚛️ Quantum-Native Intrusion Defence · Detect · Divert · Encrypt**
 >
-> A physical-layer + quantum intrusion detection system that fingerprints communication channels — including a real BB84 quantum key distribution protocol — detects eavesdroppers via statistical anomaly scoring, diverts confirmed attackers to a quantum-randomized honeypot, and protects payload data with HQNN-derived encryption keyed off the BB84 sifted key.
+> A physical-layer + quantum intrusion detection system that fingerprints communication channels — including a **real BB84 quantum key distribution protocol** — detects eavesdroppers via statistical anomaly scoring, diverts confirmed attackers to a quantum-randomized honeypot, and protects payload data with HQNN-derived encryption.
+
+</div>
 
 ---
 
-## Quantum centerpiece (the BB84 mode)
+## 📺 Demo
 
-The heart of QF-IDS's quantum claim is a **functional BB84 protocol simulator** that implements the canonical Bennett & Brassard 1984 quantum key distribution scheme, **complete with intercept-resend eavesdropping**.
-
-### What it does, in physics terms
-
-QF-IDS's BB84 mode simulates a real quantum communication channel:
-
-- **Alice** generates a random bit + random basis (rectilinear or diagonal) for each photon
-- **Bob** measures each received photon in a randomly-chosen basis
-- After public basis comparison, they keep the matching positions → the **sifted key**
-- A random sample of the sifted key is publicly revealed to compute the **Quantum Bit Error Rate (QBER)**
-
-If an eavesdropper (Eve) intercepts and re-sends photons, her measurement in the wrong basis (50% probability) collapses the photon into a random eigenstate. When Bob then measures in Alice's basis, he gets a wrong answer 50% of the time on disturbed photons. Net effect: **QBER ≈ 25% under full intercept-resend** — the foundational security result of BB84.
-
-### What QF-IDS detects, in code
-
-The detector is trained on the natural channel-noise QBER floor (around 2% from dark counts + basis misalignment). When Eve activates, QBER spikes — QF-IDS's IsolationForest flags the deviation as an attack and the response engine fires (terminate → reauth → reroute to honeypot → alert).
-
-### Verified results
+<div align="center">
 
 ```
-Test scenario: BB84 protocol, 400 pulses/window, real-fibre parameters
-
-eve_fraction   measured QBER   expected QBER   detector verdict
-─────────────────────────────────────────────────────────────────
-0.00           0.0195          0.0240          safe
-0.25           0.0757          0.0865          safe (below 11% threshold)
-0.50           0.1394          0.1490          ABORT — Eve detected
-0.75           0.1988          0.2115          ABORT — Eve detected
-1.00           0.2500          0.2740          ABORT — Eve detected
+  ALICE                   CHANNEL                   BOB
+    │   ──[↑ ↗ → ↘]──▶  eavesdropper (Eve)  ──▶  │
+    │                         │                    │
+    │   <── basis compare ────────────────────────>│
+    │                                              │
+    └──────── sifted key ──────────────────────────┘
+                         │
+               QBER ≈ 25% detected
+                         │
+               ┌─────────▼──────────┐
+               │  🔴 ATTACK DETECTED │
+               │  Response: DIVERT   │
+               │  Honeypot: ACTIVE   │
+               └────────────────────┘
 ```
 
-The 25% QBER under full intercept-resend matches the textbook Bennett-Brassard-Mermin 1992 result exactly.
+</div>
 
 ---
 
-## The project, honestly framed
+## ✨ What Makes This Quantum?
 
-**What's genuinely quantum:**
-1. **BB84 protocol simulator** — a working quantum information protocol with proper basis projection, correct Eve disturbance model, and verified textbook QBER results
-2. **ANU QRNG live source** — fetches real measured photon-shot-noise samples from Australian National University's live quantum experiment
+<div align="center">
 
-**What's physics-grounded simulation:**
-3. **Quantum dataset replay** — synthetic single-photon counts generated using real Excelitas SPCM-AQRH-14 datasheet parameters
+| Component | What It Does | Real / Simulated |
+|:---:|:---|:---:|
+| ⚛️ **BB84 Protocol** | Full Alice→Eve→Bob QKD with basis encoding, QBER estimation | ✅ Real Protocol |
+| 🎲 **ANU QRNG** | Live quantum random numbers from Australian National University photon experiment | ✅ Real Measured Data |
+| 🧠 **HQNN Encryption** | Hybrid Quantum Neural Network encryption keyed off BB84 sifted key | ✅ Exact State-Vector Sim |
+| 📡 **CICIDS-2017** | Real UNB network intrusion benchmark dataset | ✅ Real Dataset |
+| 🦠 **PCAP Capture** | Live network capture via scapy/libpcap (same engine as Wireshark) | ✅ Real Traffic |
 
-**What's classical but real:**
-4. **CICIDS-2017 dataset** with converter for actual UNB CIC CSVs
-5. **Live PCAP capture** via scapy/libpcap (same engine as Wireshark)
-6. **Wireshark .pcap file replay** — upload any capture, replay through detector
-
-**What's not real:**
-- Single-photon detector hardware (we don't have one)
-- The "channels" are software abstractions, not physical fibre links
-- Production-grade authentication/audit/firewall integration
+</div>
 
 ---
 
-## Seven data sources, one unified detector
+## 🔬 BB84 Verified Results
 
-| Mode | What it is | Real / Simulated |
-|---|---|---|
-| **SIM** | Synthetic Gaussian noise + attack classes | Simulated |
-| **DATASET** | Photon-detector physics replay | Real parameters, simulated values |
-| **CICIDS** | Network IDS benchmark, 5+ attack classes | Real (with included converter) |
-| **PCAP** | Live network capture | Real |
-| **PCAP·F** | Wireshark file replay | Real |
-| **ANU·QRNG** | Live quantum random numbers from ANU | Real measured quantum data |
-| **BB84·Q** | **BB84 protocol with Eve injection** | **Real quantum protocol, working physics** |
+```
+Test: BB84 protocol · 400 pulses/window · real-fibre parameters
 
-Same IsolationForest scores all seven. Same response engine handles all seven. That's the architectural contribution: source-agnostic physical-layer fingerprinting.
+  eve_fraction   measured QBER   expected QBER   verdict
+  ─────────────────────────────────────────────────────────
+  0.00           0.0195          0.0240          ✅ SAFE
+  0.25           0.0757          0.0865          ✅ SAFE (below 11% threshold)
+  0.50           0.1394          0.1490          🔴 ABORT — Eve detected
+  0.75           0.1988          0.2115          🔴 ABORT — Eve detected
+  1.00           0.2500          0.2740          🔴 ABORT — Eve detected
+
+  25% QBER under full intercept-resend ≡ Bennett-Brassard-Mermin 1992 ✓
+```
 
 ---
 
-## Quick start
+## 🏗️ Architecture
 
-You need **Python 3.10+** and **Node 18+**.
+<div align="center">
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        QF-IDS PIPELINE                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   DATA SOURCES          DETECTOR           RESPONSE ENGINE       │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐   │
+│  │ ⚛️  BB84·QKD  │    │              │    │  🔴 ATTACK →     │   │
+│  │ 🎲 ANU·QRNG  │───▶│ 7-Feature    │───▶│  Terminate       │   │
+│  │ 🌐 PCAP Live │    │ Statistical  │    │  Re-auth         │   │
+│  │ 📁 PCAP File │    │ Fingerprint  │    │  Reroute         │   │
+│  │ 📊 CICIDS    │    │      +       │    │  → Honeypot 🍯   │   │
+│  │ 💾 DATASET   │    │ Isolation    │    │  → Block 🚫      │   │
+│  │ 🔁 SIM       │    │ Forest       │    │  → Alert 🚨      │   │
+│  └──────────────┘    └──────────────┘    └──────────────────┘   │
+│                                                                  │
+│   ENCRYPTION LAYER                                               │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  HQNN: plaintext → angle encode → PQC (RY/RZ/CNOT) →    │  │
+│  │        measure → mix BB84 key + HKDF stream → ciphertext  │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+</div>
+
+---
+
+## 🎮 Split Dashboards — Red Team vs Blue Team
+
+<div align="center">
+
+```
+┌───────────────────────────┐     ┌───────────────────────────┐
+│   🔵  DEFENDER DASHBOARD   │     │    🔴  ATTACKER CONSOLE    │
+│   localhost:5173           │     │    localhost:8000/attacker │
+├───────────────────────────┤     ├───────────────────────────┤
+│ • Live channel waveforms  │     │ • Attacker fingerprint     │
+│ • Anomaly scores          │◀───▶│ • Launch attack payloads   │
+│ • Incident timeline       │     │ • See CLEAR/DIVERTED/      │
+│ • Honeypot activity       │     │   BLOCKED lifecycle        │
+│ • Attacker profiles       │     │ • Honeypot shell (fake)    │
+│ • MITRE ATT&CK mapping    │     │ • Lockout screen on block  │
+└───────────────────────────┘     └───────────────────────────┘
+```
+
+</div>
+
+---
+
+## 🍯 Honeypot Attacker Lifecycle
+
+<div align="center">
+
+```
+  1st Attack          2nd Attack           Profiled
+      │                   │                   │
+      ▼                   ▼                   ▼
+  ┌────────┐         ┌──────────┐        ┌─────────┐
+  │ CLEAR  │────────▶│ DIVERTED │───────▶│ BLOCKED │
+  └────────┘         └──────────┘        └─────────┘
+  Delivered to       Redirected to        HTTP 403
+  real channel       fake honeypot        at perimeter
+                     shell (attacker      All controls
+                     thinks it's real!)   disabled
+                          │
+                    ┌─────▼──────────────────────────┐
+                    │  Quantum-randomised decoy data  │
+                    │  ├─ banner → fake open ports    │
+                    │  ├─ services → fake daemons     │
+                    │  ├─ filesystem → fake files     │
+                    │  ├─ database → fake tables      │
+                    │  └─ creds → fake passwords      │
+                    │                                 │
+                    │  MITRE ATT&CK profiling         │
+                    │  Aggression score tracking      │
+                    └─────────────────────────────────┘
+```
+
+</div>
+
+---
+
+## 🛡️ Defence Layers
+
+<div align="center">
+
+| Layer | Defence | Defeats |
+|:---:|:---|:---|
+| 1️⃣ | **Adaptive Threshold + Pressure Accumulator** | Low-and-slow / evasion attacks hugging threshold |
+| 2️⃣ | **Baseline Integrity Guard** | Data-poisoning / drift attacks on learned baseline |
+| 3️⃣ | **Decoy-State Analyzer** | Photon-Number-Splitting (PNS) attacks on BB84 |
+| 4️⃣ | **PSK + HMAC Channel Authenticator** | Man-in-the-middle impersonation on QKD channel |
+
+</div>
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Backend
+# Clone the repo
+git clone https://github.com/yourusername/qfids.git
+cd qfids
+
+# ── Backend ──────────────────────────────────────────
 cd backend
 pip install -r requirements.txt
 python run.py
+# API live at http://localhost:8000
 
-# Frontend (in another terminal)
+# ── Frontend (new terminal) ───────────────────────────
 cd frontend
 npm install
 npm run dev
+# UI live at http://localhost:5173
 ```
 
-Open `http://localhost:5173`.
-
-### Demo the quantum centerpiece
-
-1. Click `⇄ Source` on any channel → **BB84 · Quantum KD**
-2. Wait 5 seconds for the detector to train on clean QBER baseline
-3. In the channel card, an **Eavesdropper · Quantum Channel** control appears
-4. Click **▸ full Eve (intercept-resend)**
-5. Within 5-10 seconds:
-   - QBER jumps from ~2% to ~25%
-   - The badge turns red: `◈ BB84 · QBER 25.30% · ABOVE THRESHOLD (Eve detected)`
-   - Detector status goes ATTACK
-   - Response engine fires: terminate → reauth → reroute → alert
-   - Incident created: `bb84-eavesdropper` from `bb84://eve@ch-alpha`
-
-You just detected a textbook quantum eavesdropping attack.
-
-### Demo the multi-source architecture
-
-Set up four different real sources on four channels:
+### ⚛️ Demo the Quantum Attack in 30 Seconds
 
 ```bash
-# In a third terminal:
+# 1. Open http://localhost:5173
+# 2. Click "⇄ Source" on any channel → select "BB84 · Quantum KD"
+# 3. Wait 5 seconds for clean baseline training
+# 4. Click "▸ full Eve (intercept-resend)"
+# 5. Watch QBER jump from ~2% → ~25% and detector fire ATTACK
+```
+
+### 🎭 Demo the Red Team vs Blue Team
+
+```bash
+# Set 4 channels to 4 different real sources
 curl -X POST http://localhost:8000/api/mode/ch-alpha -H "Content-Type: application/json" -d '{"mode":"bb84"}'
 curl -X POST http://localhost:8000/api/mode/ch-beta  -H "Content-Type: application/json" -d '{"mode":"cicids"}'
 curl -X POST http://localhost:8000/api/mode/ch-gamma -H "Content-Type: application/json" -d '{"mode":"anu_qrng"}'
 curl -X POST http://localhost:8000/api/mode/ch-delta -H "Content-Type: application/json" -d '{"mode":"pcap_file"}'
+# Then open http://localhost:8000/attacker and launch attacks
 ```
 
-Four channels, four real data streams, one detector pipeline. That's the architectural thesis.
+---
+
+## 📡 REST API Reference
+
+| Method | Endpoint | Description |
+|:---:|:---|:---|
+| `GET` | `/api/channels` | Snapshot of all channels |
+| `GET` | `/api/incidents` | All incidents |
+| `GET` | `/api/blocklist` | Blocklisted entries |
+| `POST` | `/api/attack` | Inject attack payload |
+| `POST` | `/api/mode/{channel_id}` | Switch channel data source |
+| `POST` | `/api/bb84/eve/{channel_id}` | **Set Eve interception fraction (0.0–1.0)** |
+| `POST` | `/api/pcap/upload/{channel_id}` | Upload `.pcap` file (multipart) |
+| `GET` | `/api/sources/health` | Source diagnostics |
+| `GET` | `/api/hqnn/avalanche` | Key-avalanche diffusion test (~50%) |
+| `GET` | `/api/defenses/self-test` | Run all 4 defence layer tests |
+| `WS` | `/ws` | Live tick stream |
 
 ---
 
-## What to say in defense
-
-If a panelist asks **"what's quantum about this project?"**, the honest answer:
-
-> "Two things. First, our BB84 mode implements the full Bennett-Brassard 1984 protocol — Alice's bit and basis encoding, channel transmission, Bob's basis measurement, sifting, QBER estimation. When we activate an intercept-resend eavesdropper, our simulator produces the textbook 25% QBER predicted by quantum mechanics. Our detector, trained on clean-channel QBER, flags any deviation above the BB84 abort threshold of 11%. Second, our ANU QRNG source pulls real measured quantum random numbers from a live photon experiment at Australian National University — that's genuinely measured quantum data flowing through our pipeline. We're not claiming to have built quantum hardware. We're claiming we built a detection pipeline that works on quantum data — real measured quantum data, and a verified quantum protocol — alongside classical sources. The contribution is the source-agnostic architecture."
-
-If asked **"why didn't you use real photon hardware?"**:
-
-> "Optical hardware was outside our scope. Instead we focused on the detection and response pipeline, validating it against (a) a working BB84 simulation with verified-against-theory eavesdropping behavior and (b) real measured quantum randomness from ANU. A real photon detector would replace one of our source modules with about 50 lines of hardware-adapter code — the rest of the system requires no changes."
-
----
-
-## REST API
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET  | `/api/channels`             | snapshot of all channels |
-| GET  | `/api/incidents`            | all incidents |
-| GET  | `/api/blocklist`            | block entries |
-| POST | `/api/attack`               | inject attack (multi-attack supported) |
-| POST | `/api/mode/{channel_id}`    | switch one channel's source |
-| POST | `/api/mode`                 | switch all channels |
-| POST | `/api/bb84/eve/{channel_id}` | **set Eve interception fraction (0-1)** |
-| POST | `/api/pcap/upload/{channel_id}` | upload .pcap (multipart) |
-| GET  | `/api/sources/health`       | source diagnostics |
-| GET  | `/honeypot/serve`           | decoy data (blocked for blocklisted IPs) |
-| WS   | `/ws`                       | live tick stream |
-
----
-
-## Project layout
+## 📁 Project Structure
 
 ```
 qfids/
 ├── backend/
 │   ├── data/
-│   │   ├── quantum_noise_dataset.json    Excelitas SPCM physics
-│   │   └── cicids2017_subset.json        bundled CICIDS-format data
+│   │   ├── quantum_noise_dataset.json     ← Excelitas SPCM real device params
+│   │   └── cicids2017_subset.json         ← Bundled benchmark data
 │   ├── tools/
-│   │   ├── attacker.py                   real-traffic attacker
-│   │   └── convert_cicids.py             real CICIDS CSV converter
-│   └── qfids/
-│       ├── core/
-│       │   ├── bb84.py                   ★ BB84 protocol implementation
-│       │   ├── bb84_source.py            ★ BB84 → detector bridge
-│       │   ├── anu_qrng_source.py        live quantum random API
-│       │   ├── pcap_source.py            scapy live capture
-│       │   ├── pcap_file_source.py       .pcap file replay
-│       │   ├── dataset_source.py
-│       │   ├── cicids_source.py
-│       │   ├── noise.py
-│       │   ├── detector.py
-│       │   ├── response.py
-│       │   ├── blocklist.py
-│       │   └── manager.py
-│       └── api/server.py
-└── frontend/
-    └── src/
-        ├── App.jsx
-        ├── styles.css                    light + dark theme
-        └── components/
-            ├── Logo.jsx                  fingerprint + strata mark
-            ├── ChannelCard.jsx           + BB84 Eve control widget
-            └── ...
+│   │   ├── attacker.py                    ← Real-traffic attack tool
+│   │   └── convert_cicids.py              ← CICIDS CSV converter
+│   └── qfids/core/
+│       ├── bb84.py                        ★ BB84 protocol implementation
+│       ├── bb84_source.py                 ★ BB84 → detector bridge
+│       ├── anu_qrng_source.py             ← Live ANU quantum API
+│       ├── hqnn.py                        ← HQNN encryption engine
+│       ├── detector.py                    ← IsolationForest pipeline
+│       ├── response.py                    ← Response engine
+│       ├── quantum_honeypot.py            ← Multi-tier honeypot
+│       ├── defenses.py                    ← 4 loophole mitigations
+│       └── manager.py                     ← Channel orchestrator
+├── frontend/src/
+│   ├── App.jsx
+│   └── components/
+│       ├── ChannelCard.jsx                ← BB84 Eve control widget
+│       ├── HoneypotPanel.jsx
+│       ├── AttackersPanel.jsx
+│       └── ...
+└── customer-portal/                       ← Multi-tenant customer portal
 ```
 
 ---
 
-## References (cite these in your paper)
+## 📚 References
 
-- Bennett, C. H. & Brassard, G. (1984). "Quantum cryptography: Public key distribution and coin tossing." *Proceedings of IEEE International Conference on Computers, Systems and Signal Processing*, 175-179.
-- Bennett, C. H., Brassard, G., & Mermin, N. D. (1992). "Quantum cryptography without Bell's theorem." *Physical Review Letters*, 68(5), 557.
-- Sharafaldin, I., Lashkari, A. H., & Ghorbani, A. A. (2018). "Toward generating a new intrusion detection dataset and intrusion traffic characterization." *4th International Conference on Information Systems Security and Privacy*.
-- Excelitas Technologies. SPCM-AQRH single-photon counting module datasheet (real device parameters used in DATASET mode).
-- Symul, T., Assad, S. M., & Lam, P. K. (2011). "Real time demonstration of high bitrate quantum random number generation with coherent laser light." *Applied Physics Letters*, 98(23). (ANU QRNG reference.)
-
----
-
-## v2 — New in this release
-
-### Channels renamed
-Channels are now **Channel A, B, C, D** (ids `ch-a`…`ch-d`) throughout the system.
-
-### Loophole mitigations (`backend/qfids/core/defenses.py`)
-Four research-backed defences close known attack vectors:
-1. **Adaptive threshold + pressure accumulator** — defeats low-and-slow / evasion attacks that hug just under the detection threshold.
-2. **Baseline integrity guard** — detects data-poisoning of the learned baseline via drift monitoring.
-3. **Decoy-state analyzer** — the standard countermeasure against Photon-Number-Splitting (PNS) attacks on BB84.
-4. **Channel authenticator (PSK + HMAC)** — blocks man-in-the-middle impersonation on the QKD channel.
-
-Try: `GET /api/defenses/self-test`, `POST /api/defenses/decoy-state?eve_pns=true`, `POST /api/defenses/authenticate?inject_mitm=true`
-
-### Deeper encryption (`backend/qfids/core/hqnn.py`)
-v3 adds **double-layer authenticated encryption**: the quantum HQNN keystream is now mixed with an independent HKDF classical keystream, with a per-message key schedule. Includes a live **key-avalanche test** proving ~50% diffusion.
-
-Try: `POST /api/hqnn/deep-encrypt`, `GET /api/hqnn/avalanche`, `GET /api/hqnn/depth-report`
-
-### Deeper honeypot (`backend/qfids/core/quantum_honeypot.py`)
-The honeypot is now a **multi-tier deception environment** (banner → services → filesystem → database → credentials) with **attacker profiling** (classification, aggression, engagement score) and **MITRE ATT&CK threat-intel reports**.
-
-Try: `GET /api/honeypot/deception/walkthrough`
-
-### Channel detail view (operator dashboard)
-Click any channel card to open a **full detail view** with a large live waveform, anomaly score, adaptive-threshold + baseline-integrity status, feature breakdown, active attacks, and incidents.
-
-### Customer portal (`customer-portal/index.html`, served at `/portal`)
-A separate **multi-tenant customer website**. Customers log in and see **only the channels they have purchased**, with a security summary, plan details, live channel cards, and per-channel detail. Three demo accounts (Enterprise / Business / Starter) are seeded.
-
-Access: start the backend, then open **http://localhost:8000/portal**
-
-### Activity log format
-The activity-log download is now a human-readable **`.txt`** report (was CSV).
+- Bennett, C. H. & Brassard, G. (1984). *Quantum cryptography: Public key distribution and coin tossing.* IEEE ICCSS, 175–179.
+- Bennett, C. H., Brassard, G., & Mermin, N. D. (1992). *Quantum cryptography without Bell's theorem.* Physical Review Letters, 68(5), 557.
+- Sharafaldin et al. (2018). *Toward generating a new intrusion detection dataset.* ICISSP.
+- Excelitas Technologies. *SPCM-AQRH single-photon counting module datasheet.*
+- Symul, T., Assad, S. M., & Lam, P. K. (2011). *Real time demonstration of high bitrate QRNG.* Applied Physics Letters, 98(23).
 
 ---
 
-## v3 — Split dashboards (defender + attacker)
+<div align="center">
 
-The system is now split into two separate interfaces, simulating a real
-attacker on a different machine attacking the defended system.
+<!-- Footer wave -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:00d2ff,50:0a3d62,100:0d0221&height=120&section=footer" width="100%"/>
 
-### Defender dashboard (security operations) — `frontend/` on port 5173
-Defence-only. **All attack/injection controls have been removed** (no "Inject
-attack" buttons, no "Attack all"). It now also has an **Attackers** tab showing
-every external system that has attacked it, with that system's details and
-block status.
+**Built with ⚛️ quantum principles · 🛡️ real security research · 🐍 Python + ⚛️ React**
 
-### Attacker console — served at `http://localhost:8000/attacker`
-A separate red-team interface. It shows **the details of the system you are
-attacking from** (IP, platform, user-agent, fingerprint) and lets you launch
-attacks against the defender's channels. Attacks travel to the backend and
-appear live on the defender dashboard.
+![Visitors](https://visitor-badge.lbs.today/badge?page_id=qfids.readme)
 
-### Block-on-repeat enforcement
-When the defender's IDS detects an attack, it blocklists the attacker's IP.
-**The next attack from that same system is rejected with HTTP 403 before it
-reaches any channel** — visible as "BLOCKED" on the attacker console. This is
-enforced in `POST /api/attack` via `blocklist.is_blocked()`.
-
-New backend module: `backend/qfids/core/attackers.py` (attacker system registry).
-New routes: `GET /api/attacker/whoami`, `GET /api/attacker/status`,
-`GET /api/attackers`, `GET /attacker`.
-
-### Two-machine setup
-- Run the backend on the defended machine.
-- On the attacker machine, browse to `http://<defender-ip>:8000/attacker`.
-- Launch attacks; watch them appear on the defender dashboard; get blocked on
-  repeat. (On a single machine, use the "Source IP" field on the attacker
-  console to simulate a distinct attacking address, since loopback is allowlisted.)
-
----
-
-## v4 — Real honeypot diversion + attacker lifecycle
-
-The attacker console is now a genuine adversary experience with a real
-three-state lifecycle enforced end-to-end:
-
-**CLEAR → DIVERTED → BLOCKED**
-
-1. **First attack** lands on the targeted channel (delivered).
-2. The IDS detects it and silently marks the attacker **DIVERTED**. Their *next*
-   attack does **not** reach a real channel — it is redirected into the quantum
-   honeypot. The attacker is told "Foothold established. Shell access granted."
-   and **believes they breached a real server**.
-3. Inside the honeypot the attacker runs recon commands (`whoami`, `services`,
-   `ls`, `db`, `creds`). Each returns **freshly quantum-randomised decoy data** —
-   fake open ports, fake sensitive files, fake DB tables, fake credentials. No
-   two sessions see the same data.
-4. After exploring enough tiers they are **fully profiled** (classified +
-   MITRE-mapped) and **hard-blocked**. The attacker console flips to a full
-   **lockout screen** — every further attack is rejected with HTTP 403 at the
-   perimeter, and the launch controls are gone.
-
-New backend route: `POST /api/attacker/honeypot-explore` (serves decoy tiers,
-profiles the attacker, auto-blocks once profiling is complete).
-`GET /api/attacker/status?source_ip=…` now reports the lifecycle state so the
-console switches modes automatically.
-
-The defender dashboard's Honeypot panel and Attackers tab show the diversion,
-the profiling, and the eventual block in real time.
+</div>
