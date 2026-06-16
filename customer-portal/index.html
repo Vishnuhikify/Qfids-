@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QF-IDS · Customer Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     FIREBASE  (Authentication with email + password)
+     ────────────────────────────────────────────────────────────────────
+     1. Create a Firebase project at https://console.firebase.google.com
+     2. Build → Authentication → Sign-in method → enable "Email/Password"
+     3. Project settings → "Your apps" → Web app → copy the config object
+        and paste its values into FIREBASE_CONFIG below.
+     If you leave the placeholder apiKey as-is, the portal automatically runs
+     in LEGACY (email-only, in-memory) mode so the demo still works.
+     See FIREBASE_SETUP.md for the full walkthrough.
+-->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+  window.FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBDBhklXLCmd4WFhgGVHS_S5FBWecYV1hc",
+    authDomain: "qfids-970f9.firebaseapp.com",
+    projectId: "qfids-970f9",
+    appId: "1:155817031746:web:86f68e5f57de8baf5d55db"
+  };
+  // Initialise Firebase only if real config was provided.
+window.FIREBASE_READY = false;
+
+try {
+    if (window.firebase) {
+        firebase.initializeApp(window.FIREBASE_CONFIG);
+        window.FIREBASE_READY = true;
+    }
+} catch(e) {
+    console.warn("Firebase init skipped:", e.message);
+}
+</script>
+<style>
+  :root {
+    --bg: #070b14; --panel: #0e1420; --panel2: #131b2b; --border: #20293a;
+    --text0: #f0f4f8; --text1: #c4cbd5; --text2: #8893a1; --text3: #5a6376;
+    --primary: #00ddff; --magenta: #ff00aa; --green: #00ff88;
+    --amber: #ffb020; --danger: #ff3355;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text1); min-height: 100vh;
+  }
+  .mono { font-family: 'SF Mono', Consolas, monospace; }
+  a { color: var(--primary); text-decoration: none; }
+
+  /* ── top bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px; border-bottom: 1px solid var(--border);
+    background: var(--panel); position: sticky; top: 0; z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 36px; height: 36px; border: 2px solid var(--primary);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    color: var(--primary); font-weight: 800; font-size: 18px;
+  }
+  .brand-text { font-weight: 700; font-size: 16px; color: var(--text0); letter-spacing: 0.5px; }
+  .brand-sub { font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .user-chip { text-align: right; }
+  .user-name { font-size: 13px; color: var(--text0); font-weight: 600; }
+  .user-company { font-size: 11px; color: var(--text2); }
+  .btn {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--text1);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.15s ease;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-primary { background: var(--primary); color: #04121a; border-color: var(--primary); font-weight: 700; }
+  .btn-primary:hover { opacity: 0.9; color: #04121a; }
+
+  /* ── login ── */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .login-card {
+    width: min(440px, 94vw); background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .login-logo { text-align: center; margin-bottom: 8px; }
+  .login-logo .brand-mark { margin: 0 auto 14px; width: 52px; height: 52px; font-size: 26px; }
+  .login-title { text-align: center; font-size: 24px; color: var(--text0); font-weight: 700; margin-bottom: 4px; }
+  .login-sub { text-align: center; font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text0);
+    padding: 12px 14px; border-radius: 9px; font-size: 14px;
+  }
+  .field input:focus { outline: none; border-color: var(--primary); }
+  .login-btn { width: 100%; padding: 13px; font-size: 15px; margin-top: 6px; }
+  .login-err { color: var(--danger); font-size: 13px; text-align: center; margin-top: 14px; min-height: 18px; }
+  .demo-creds {
+    margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text3);
+  }
+  .demo-creds h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 10px; }
+  .demo-row { display: flex; justify-content: space-between; padding: 5px 0; cursor: pointer; border-radius: 6px; }
+  .demo-row:hover { color: var(--primary); }
+
+  /* ── dashboard layout ── */
+  .portal { max-width: 1200px; margin: 0 auto; padding: 28px; }
+  .page-title { font-size: 26px; color: var(--text0); font-weight: 700; margin-bottom: 4px; }
+  .page-sub { font-size: 14px; color: var(--text2); margin-bottom: 26px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 860px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .stat-card .top { height: 4px; border-radius: 2px; margin: -18px -20px 14px; }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-value { font-size: 32px; font-weight: 800; color: var(--text0); line-height: 1; }
+  .stat-value.protected { color: var(--green); }
+  .stat-value.danger { color: var(--danger); }
+  .stat-note { font-size: 11px; color: var(--text2); margin-top: 6px; }
+
+  .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); font-weight: 700; margin: 8px 0 14px; }
+
+  .chan-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .chan-grid { grid-template-columns: 1fr; } }
+  .chan-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .chan-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .chan-card.attack { border-color: var(--danger); }
+  .chan-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .chan-id { font-size: 12px; color: var(--text3); }
+  .chan-name { font-size: 17px; color: var(--text0); font-weight: 700; }
+  .state-pill { font-size: 10px; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+  .state-pill.ACTIVE { background: rgba(0,255,136,0.12); color: var(--green); }
+  .state-pill.LEARNING { background: rgba(0,221,255,0.12); color: var(--primary); }
+  .state-pill.UNDER_ATTACK { background: rgba(255,51,85,0.15); color: var(--danger); }
+  .state-pill.TERMINATED, .state-pill.REAUTH { background: rgba(255,176,32,0.15); color: var(--amber); }
+  .chan-wave { height: 56px; margin: 12px 0; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+  .chan-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); }
+  .chan-score { font-weight: 700; }
+
+  /* detail modal */
+  .ov { position: fixed; inset: 0; background: rgba(5,8,16,0.8); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal { width: min(720px, 96vw); max-height: 90vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; }
+  .modal-hd { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }
+  .modal-body { padding: 20px 22px; }
+  .close-x { background: var(--panel2); border: 1px solid var(--border); color: var(--text1); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+  .close-x:hover { background: var(--danger); color: #fff; }
+  .kv { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text2); }
+  .kv b { color: var(--text0); }
+  .protect-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 700; }
+  .protect-badge.on { background: rgba(0,255,136,0.12); color: var(--green); }
+
+  .plan-banner { background: linear-gradient(135deg, rgba(0,221,255,0.08), rgba(255,0,170,0.06)); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 26px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .plan-name { font-size: 18px; font-weight: 700; color: var(--text0); }
+  .plan-feats { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .loading { text-align: center; padding: 60px; color: var(--text3); }
+
+  /* ── auth tabs ── */
+  .auth-tabs { display: flex; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+  .auth-tab { flex: 1; text-align: center; padding: 9px 0; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s ease; }
+  .auth-tab:hover { color: var(--text0); }
+  .auth-tab.active { background: var(--panel2); color: var(--primary); box-shadow: 0 0 0 1px var(--border); }
+  .login-card.wide { width: min(560px, 95vw); }
+
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .field select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text0); padding: 12px 14px; border-radius: 9px; font-size: 14px; }
+  .field select:focus { outline: none; border-color: var(--primary); }
+
+  /* plan picker */
+  .plan-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 6px; }
+  @media (max-width: 520px) { .plan-pick { grid-template-columns: 1fr; } }
+  .plan-opt { border: 1px solid var(--border); border-radius: 11px; padding: 14px; cursor: pointer; background: var(--bg); transition: all 0.15s ease; }
+  .plan-opt:hover { border-color: var(--text2); }
+  .plan-opt.sel { border-color: var(--primary); background: rgba(0,221,255,0.06); box-shadow: 0 0 0 1px var(--primary); }
+  .plan-opt .pname { font-size: 14px; font-weight: 700; color: var(--text0); }
+  .plan-opt .pprice { font-size: 12px; color: var(--primary); margin: 3px 0 8px; font-weight: 600; }
+  .plan-opt .pmeta { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+  /* channel picker */
+  .chan-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .chan-opt { display: flex; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; cursor: pointer; background: var(--bg); font-size: 13px; color: var(--text1); transition: all 0.15s ease; }
+  .chan-opt:hover:not(.disabled) { border-color: var(--text2); }
+  .chan-opt.sel { border-color: var(--green); background: rgba(0,255,136,0.07); color: var(--text0); }
+  .chan-opt.disabled { opacity: 0.4; cursor: not-allowed; }
+  .chan-opt .box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--text3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .chan-opt.sel .box { background: var(--green); border-color: var(--green); color: #04121a; }
+  .hint { font-size: 11px; color: var(--text3); margin: 8px 0 16px; }
+  .login-ok { color: var(--green); font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
+  .switch-link { text-align: center; font-size: 13px; color: var(--text2); margin-top: 18px; }
+  .switch-link b { color: var(--primary); cursor: pointer; }
+
+  /* toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--green); color: var(--text0); padding: 12px 22px; border-radius: 10px; font-size: 13px; z-index: 300; box-shadow: 0 12px 40px rgba(0,0,0,0.5); animation: toastIn 0.25s ease; }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const API = 'http://localhost:8000'; // same origin
+
+function authHeaders(token) {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+}
+
+/* ─────────────────────────  FIREBASE HELPERS  ─────────────────────────
+   FB_ON is true only when a real Firebase config was provided in the <head>.
+   When false, the portal uses the legacy email-only (in-memory) flow so the
+   demo keeps working without any Firebase setup. */
+const FB_ON = typeof window !== 'undefined' && window.FIREBASE_READY === true;
+
+async function fbSignUp(email, password) {
+  const cred = await window.firebase.auth().createUserWithEmailAndPassword(email, password);
+  return await cred.user.getIdToken();
+}
+async function fbSignIn(email, password) {
+  const cred = await window.firebase.auth().signInWithEmailAndPassword(email, password);
+  return await cred.user.getIdToken();
+}
+async function fbCurrentToken() {
+  const u = window.firebase && window.firebase.auth ? window.firebase.auth().currentUser : null;
+  return u ? await u.getIdToken() : null;
+}
+async function fbSignOut() {
+  try { if (FB_ON) await window.firebase.auth().signOut(); } catch (_) {}
+}
+// Turn Firebase auth error codes into friendly messages.
+function fbErr(e) {
+  const c = (e && e.code) || '';
+  if (c === 'auth/email-already-in-use') return 'That email already has an account — switch to Sign in.';
+  if (c === 'auth/invalid-email') return 'That email address looks invalid.';
+  if (c === 'auth/weak-password') return 'Password is too weak (use at least 6 characters).';
+  if (c === 'auth/wrong-password' || c === 'auth/invalid-credential') return 'Incorrect email or password.';
+  if (c === 'auth/user-not-found') return 'No account found for that email — please register.';
+  if (c === 'auth/too-many-requests') return 'Too many attempts. Please wait a moment and retry.';
+  return (e && e.message) || 'Authentication failed.';
+}
+
+/* ─────────────────────────  AUTH (sign in + register)  ───────────────────────── */
+async function readError(r, fallback) {
+  try {
+    const d = await r.json();
+    if (d && d.detail) return typeof d.detail === 'string' ? d.detail : fallback;
+  } catch (_) {}
+  return fallback;
+}
+
+function SignIn({ onLogin, onToast }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const demoAccounts = [
+    { label: 'Meridian Bank · Enterprise · 4 channels', email: 'aarav@meridianbank.example' },
+    { label: 'Helix Telecom · Business · 2 channels', email: 'priya@helixtelecom.example' },
+    { label: 'Nimbus Fintech · Starter · 1 channel', email: 'rohan@nimbus.example' },
+  ];
+
+  // Firebase mode: sign in with email+password, get an ID token, hand it to the backend.
+  const doLoginFirebase = async () => {
+    if (!email.trim() || !password) { setErr('Enter your email and password.'); return; }
+    setBusy(true); setErr('');
+    try {
+      const idToken = await fbSignIn(email.trim(), password);
+      const r = await fetch(API + '/api/portal/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+      if (r.status === 404) { await fbSignOut(); throw new Error('Signed in, but no profile found. Please Register first.'); }
+      if (!r.ok) throw new Error(await readError(r, 'Sign-in failed.'));
+      const data = await r.json();
+      localStorage.setItem('qfids_portal_token', data.token);
+      onToast('Signed in as ' + data.customer.company);
+      onLogin(data.token, data.customer);
+    } catch (e) {
+      setErr(fbErr(e));
+    }
+    setBusy(false);
+  };
+
+  // Legacy mode: email-only against the in-memory backend.
+  const doLoginLegacy = async (loginEmail) => {
+    const value = (loginEmail || '').trim();
+    if (!value) { setErr('Please enter your account email.'); return; }
+    setBusy(true); setErr('');
+    try {
+      const r = await fetch(API + '/api/portal/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: value }),
+      });
+      if (r.status === 401) throw new Error('No account found for that email. Create one with “Register”.');
+      if (!r.ok) throw new Error(await readError(r, 'Sign-in failed. Please try again.'));
+      const data = await r.json();
+      localStorage.setItem('qfids_portal_token', data.token);
+      onToast('Signed in as ' + data.customer.company);
+      onLogin(data.token, data.customer);
+    } catch (e) {
+      setErr(e.message || 'Network error. Is the server running?');
+    }
+    setBusy(false);
+  };
+
+  const submit = () => (FB_ON ? doLoginFirebase() : doLoginLegacy(email));
+
+  return (
+    <div>
+      <div className="field">
+        <label>Account email</label>
+        <input
+          type="email" value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          placeholder="you@company.com"
+        />
+      </div>
+      {FB_ON && (
+        <div className="field">
+          <label>Password</label>
+          <input
+            type="password" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            placeholder="••••••••"
+          />
+        </div>
+      )}
+      <button className="btn btn-primary login-btn" disabled={busy} onClick={submit}>
+        {busy ? 'Signing in…' : 'Sign in'}
+      </button>
+      <div className="login-err">{err}</div>
+
+      {!FB_ON && (
+        <div className="demo-creds">
+          <h4>Demo accounts — click to sign in</h4>
+          {demoAccounts.map((a) => (
+            <div className="demo-row" key={a.email} onClick={() => doLoginLegacy(a.email)}>
+              <span>{a.label}</span><span className="mono">→</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Register({ onLogin, onToast, onDone }) {
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [plan, setPlan] = useState('starter');
+  const [picked, setPicked] = useState([]);
+  const [plans, setPlans] = useState(null);
+  const [avail, setAvail] = useState([]);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch(API + '/api/portal/plans').then((r) => r.json()).then(setPlans).catch(() => {});
+    fetch(API + '/api/portal/available-channels')
+      .then((r) => r.json()).then((d) => setAvail(d.channels || [])).catch(() => {});
+  }, []);
+
+  const planList = plans ? Object.entries(plans).map(([id, p]) => ({ id, ...p })) : [];
+  const planLimit = plans && plans[plan] ? plans[plan].max_channels : 1;
+
+  const toggleChannel = (cid, disabled) => {
+    if (disabled) return;
+    setErr('');
+    setPicked((prev) => {
+      if (prev.includes(cid)) return prev.filter((c) => c !== cid);
+      if (prev.length >= planLimit) {
+        setErr('Your selected plan allows up to ' + planLimit + ' channel(s).');
+        return prev;
+      }
+      return [...prev, cid];
+    });
+  };
+
+  const choosePlan = (id) => {
+    setPlan(id);
+    const lim = plans[id].max_channels;
+    setPicked((prev) => prev.slice(0, lim));
+    setErr('');
+  };
+
+  const submit = async () => {
+    if (!name.trim() || !company.trim() || !email.trim()) {
+      setErr('Name, company and email are all required.'); return;
+    }
+    if (FB_ON && password.length < 6) {
+      setErr('Choose a password of at least 6 characters.'); return;
+    }
+    setBusy(true); setErr('');
+    try {
+      let body = { name, company, email, plan, channels: picked };
+      let savedToken;
+
+      if (FB_ON) {
+        // 1) Create the user in Firebase Auth (handles the password securely).
+        const idToken = await fbSignUp(email.trim(), password);
+        // 2) Save the business profile to Firestore via our backend.
+        body.id_token = idToken;
+        savedToken = idToken;
+      }
+
+      const r = await fetch(API + '/api/portal/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        // If the profile write failed in Firebase mode, remove the half-created auth user.
+        if (FB_ON) { try { const u = window.firebase.auth().currentUser; if (u) await u.delete(); } catch (_) {} }
+        throw new Error(await readError(r, 'Could not create the account.'));
+      }
+      const data = await r.json();
+      const token = data.token || savedToken;
+      localStorage.setItem('qfids_portal_token', token);
+      onToast('Welcome, ' + data.customer.company + ' — account created');
+      onLogin(token, data.customer);
+    } catch (e) {
+      setErr(FB_ON ? fbErr(e) : (e.message || 'Network error. Is the server running?'));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div>
+      <div className="field-row">
+        <div className="field">
+          <label>Full name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
+        </div>
+        <div className="field">
+          <label>Company</label>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Corp" />
+        </div>
+      </div>
+      <div className="field">
+        <label>Work email</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+      </div>
+      {FB_ON && (
+        <div className="field">
+          <label>Password (min 6 characters)</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+        </div>
+      )}
+
+      <div className="field">
+        <label>Choose a plan</label>
+        <div className="plan-pick">
+          {planList.map((p) => (
+            <div key={p.id} className={'plan-opt' + (plan === p.id ? ' sel' : '')} onClick={() => choosePlan(p.id)}>
+              <div className="pname">{p.name}</div>
+              <div className="pprice">₹{(p.price_inr_month || 0).toLocaleString('en-IN')}/mo</div>
+              <div className="pmeta">Up to {p.max_channels} channel{p.max_channels > 1 ? 's' : ''}<br/>{p.encryption}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="field">
+        <label>Subscribe channels ({picked.length}/{planLimit})</label>
+        <div className="chan-pick">
+          {avail.map((c) => {
+            const sel = picked.includes(c.channel_id);
+            const disabled = !c.available && !sel;
+            return (
+              <div
+                key={c.channel_id}
+                className={'chan-opt' + (sel ? ' sel' : '') + (disabled ? ' disabled' : '')}
+                onClick={() => toggleChannel(c.channel_id, disabled)}
+              >
+                <span className="box">{sel ? '✓' : ''}</span>
+                <span>
+                  {c.label}{' '}
+                  <span className="mono" style={{ color: 'var(--text3)', fontSize: 11 }}>
+                    {disabled ? '(taken)' : c.channel_id}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="hint">You can launch with zero channels and add them later. Taken channels belong to another tenant.</div>
+      </div>
+
+      <button className="btn btn-primary login-btn" disabled={busy} onClick={submit}>
+        {busy ? 'Creating account…' : 'Create account & sign in'}
+      </button>
+      <div className="login-err">{err}</div>
+    </div>
+  );
+}
+
+function Auth({ onLogin, onToast }) {
+  const [mode, setMode] = useState('signin');
+  return (
+    <div className="login-wrap">
+      <div className={'login-card' + (mode === 'register' ? ' wide' : '')}>
+        <div className="login-logo">
+          <div className="brand-mark">A</div>
+        </div>
+        <div className="login-title">Customer Portal</div>
+        <div className="login-sub">Quantum Fingerprint Intrusion Detection System</div>
+
+        <div className="auth-tabs">
+          <div className={'auth-tab' + (mode === 'signin' ? ' active' : '')} onClick={() => setMode('signin')}>Sign in</div>
+          <div className={'auth-tab' + (mode === 'register' ? ' active' : '')} onClick={() => setMode('register')}>Register</div>
+        </div>
+
+        {mode === 'signin'
+          ? <SignIn onLogin={onLogin} onToast={onToast} />
+          : <Register onLogin={onLogin} onToast={onToast} />}
+
+        <div className="switch-link">
+          {mode === 'signin'
+            ? <span>New to QF-IDS? <b onClick={() => setMode('register')}>Create an account</b></span>
+            : <span>Already have an account? <b onClick={() => setMode('signin')}>Sign in</b></span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────  WAVEFORM  ───────────────────────── */
+function MiniWave({ history }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const cv = ref.current; if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    ctx.clearRect(0, 0, w, h);
+    const data = history || [];
+    if (data.length < 2) return;
+    const min = Math.min(...data), max = Math.max(...data), range = (max - min) || 1;
+    ctx.strokeStyle = '#00ddff'; ctx.lineWidth = 1.5; ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * (h - 8) - 4;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }, [history]);
+  return <canvas ref={ref} width={340} height={56} style={{ width: '100%', height: 56 }} />;
+}
+
+/* ─────────────────────────  CHANNEL DETAIL  ───────────────────────── */
+function ChannelDetailModal({ channel, incidents, onClose }) {
+  if (!channel) return null;
+  const d = channel.defense || {};
+  const at = d.adaptive_threshold || {};
+  const bg = d.baseline_guard || {};
+  const score = channel.score || 0;
+  return (
+    <div className="ov" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-hd">
+          <div>
+            <div className="chan-id mono">{channel.channel_id} · live detail</div>
+            <div className="chan-name">{channel.label}</div>
+          </div>
+          <button className="close-x" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="chan-wave" style={{ height: 90 }}>
+            <MiniWaveBig history={channel.history} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <div className="kv"><span>State</span><b>{channel.state}</b></div>
+            <div className="kv"><span>Anomaly score</span><b>{score.toFixed(3)}</b></div>
+            <div className="kv"><span>Detection threshold (adaptive)</span><b>{(at.effective_threshold ?? 0.65).toFixed(3)}</b></div>
+            <div className="kv"><span>Low-and-slow pressure</span><b>{(at.pressure ?? 0).toFixed(2)} / {at.pressure_capacity ?? 4}</b></div>
+            <div className="kv"><span>Baseline protected</span><b>{bg.reference_committed ? 'Yes' : 'Learning…'}</b></div>
+            <div className="kv"><span>Baseline integrity hash</span><b className="mono">{bg.reference_hash || '—'}</b></div>
+            <div className="kv"><span>Active attacks</span><b>{(channel.attacks || []).length}</b></div>
+          </div>
+          <div style={{ marginTop: 18 }}>
+            <div className="section-title">Incidents ({incidents.length})</div>
+            {incidents.length === 0
+              ? <div style={{ fontSize: 13, color: 'var(--text3)' }}>No incidents — channel is healthy.</div>
+              : incidents.slice(0, 6).map((i) => (
+                <div className="kv" key={i.incident_id}>
+                  <span className="mono">{i.incident_id}</span>
+                  <b>{(i.attack_type || '').toUpperCase()} · {i.closed_at ? 'resolved' : 'active'}</b>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniWaveBig({ history }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const cv = ref.current; if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    ctx.clearRect(0, 0, w, h);
+    const data = history || [];
+    if (data.length < 2) return;
+    const min = Math.min(...data), max = Math.max(...data), range = (max - min) || 1;
+    ctx.strokeStyle = '#00ddff'; ctx.lineWidth = 2; ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * (h - 14) - 7;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }, [history]);
+  return <canvas ref={ref} width={660} height={90} style={{ width: '100%', height: 90 }} />;
+}
+
+/* ─────────────────────────  DASHBOARD  ───────────────────────── */
+function Dashboard({ token, customer, onLogout, onAddCustomer }) {
+  const [channels, setChannels] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [detailIncidents, setDetailIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = async () => {
+    try {
+      const [chR, sumR] = await Promise.all([
+        fetch(API + '/api/portal/channels', { headers: authHeaders(token) }),
+        fetch(API + '/api/portal/summary', { headers: authHeaders(token) }),
+      ]);
+      if (chR.status === 401 || sumR.status === 401) { onLogout(); return; }
+      const chData = await chR.json();
+      const sumData = await sumR.json();
+      setChannels(chData.channels || []);
+      setSummary(sumData.security_summary || null);
+      setLoading(false);
+    } catch (e) { /* keep last good */ }
+  };
+
+  useEffect(() => {
+    refresh();
+    const t = setInterval(refresh, 1500);
+    return () => clearInterval(t);
+  }, []);
+
+  const openDetail = async (cid) => {
+    try {
+      const r = await fetch(API + '/api/portal/channels/' + cid, { headers: authHeaders(token) });
+      const data = await r.json();
+      setDetailIncidents(data.incidents || []);
+    } catch { setDetailIncidents([]); }
+    setSelected(cid);
+  };
+
+  const plan = customer.plan_details || {};
+  const selChan = channels.find((c) => c.channel_id === selected);
+
+  return (
+    <div>
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-mark">A</div>
+          <div>
+            <div className="brand-text">QF-IDS Portal</div>
+            <div className="brand-sub">Quantum Defence as a Service</div>
+          </div>
+        </div>
+        <div className="topbar-right">
+          <div className="user-chip">
+            <div className="user-name">{customer.name}</div>
+            <div className="user-company">{customer.company}</div>
+          </div>
+          <button className="btn" onClick={onAddCustomer}>+ Add customer</button>
+          <button className="btn" onClick={onLogout}>Sign out</button>
+        </div>
+      </div>
+
+      <div className="portal">
+        <div className="page-title">Security Dashboard</div>
+        <div className="page-sub">Live protection status for your subscribed channels.</div>
+
+        <div className="plan-banner">
+          <div>
+            <div className="plan-name">{plan.name} plan</div>
+            <div className="plan-feats">{(plan.features || []).join('  ·  ')}</div>
+          </div>
+          <div className="protect-badge on">
+            ◆ {plan.encryption || 'HQNN'} encryption active
+          </div>
+        </div>
+
+        {summary && (
+          <div className="summary-grid">
+            <div className="stat-card">
+              <div className="top" style={{ background: summary.protection_status === 'PROTECTED' ? 'var(--green)' : 'var(--danger)' }} />
+              <div className="stat-label">Protection status</div>
+              <div className={'stat-value ' + (summary.protection_status === 'PROTECTED' ? 'protected' : 'danger')} style={{ fontSize: 22 }}>
+                {summary.protection_status}
+              </div>
+              <div className="stat-note">{summary.channels_protected} channel(s) monitored</div>
+            </div>
+            <div className="stat-card">
+              <div className="top" style={{ background: 'var(--primary)' }} />
+              <div className="stat-label">Channels</div>
+              <div className="stat-value">{summary.channels_protected}</div>
+              <div className="stat-note">{summary.channels_under_attack} under attack</div>
+            </div>
+            <div className="stat-card">
+              <div className="top" style={{ background: 'var(--amber)' }} />
+              <div className="stat-label">Active incidents</div>
+              <div className="stat-value">{summary.active_incidents}</div>
+              <div className="stat-note">{summary.total_incidents} total recorded</div>
+            </div>
+            <div className="stat-card">
+              <div className="top" style={{ background: 'var(--magenta)' }} />
+              <div className="stat-label">Threats blocked</div>
+              <div className="stat-value">{summary.blocked_threats}</div>
+              <div className="stat-note">across all channels</div>
+            </div>
+          </div>
+        )}
+
+        <div className="section-title">Your channels</div>
+        {loading ? (
+          <div className="loading">Loading your channels…</div>
+        ) : channels.length === 0 ? (
+          <div className="loading">No channels on your subscription yet.</div>
+        ) : (
+          <div className="chan-grid">
+            {channels.map((c) => {
+              const attack = c.state === 'UNDER_ATTACK';
+              return (
+                <div key={c.channel_id} className={'chan-card' + (attack ? ' attack' : '')} onClick={() => openDetail(c.channel_id)}>
+                  <div className="chan-hd">
+                    <div>
+                      <div className="chan-id mono">{c.channel_id}</div>
+                      <div className="chan-name">{c.label}</div>
+                    </div>
+                    <span className={'state-pill ' + c.state}>{c.state}</span>
+                  </div>
+                  <div className="chan-wave"><MiniWave history={c.history} /></div>
+                  <div className="chan-meta">
+                    <span>anomaly score</span>
+                    <span className="chan-score mono" style={{ color: (c.score || 0) > 0.65 ? 'var(--danger)' : 'var(--green)' }}>
+                      {(c.score || 0).toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selected && (
+        <ChannelDetailModal
+          channel={selChan}
+          incidents={detailIncidents}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────  ADD CUSTOMER (modal)  ───────────────────────── */
+function AddCustomerModal({ onClose, onToast }) {
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [plan, setPlan] = useState('starter');
+  const [picked, setPicked] = useState([]);
+  const [plans, setPlans] = useState(null);
+  const [avail, setAvail] = useState([]);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState(null);
+
+  const load = () => {
+    fetch(API + '/api/portal/plans').then((r) => r.json()).then(setPlans).catch(() => {});
+    fetch(API + '/api/portal/available-channels')
+      .then((r) => r.json()).then((d) => setAvail(d.channels || [])).catch(() => {});
+  };
+  useEffect(load, []);
+
+  const planList = plans ? Object.entries(plans).map(([id, p]) => ({ id, ...p })) : [];
+  const planLimit = plans && plans[plan] ? plans[plan].max_channels : 1;
+
+  const toggleChannel = (cid, disabled) => {
+    if (disabled) return;
+    setErr('');
+    setPicked((prev) => {
+      if (prev.includes(cid)) return prev.filter((c) => c !== cid);
+      if (prev.length >= planLimit) { setErr('This plan allows up to ' + planLimit + ' channel(s).'); return prev; }
+      return [...prev, cid];
+    });
+  };
+  const choosePlan = (id) => { setPlan(id); setPicked((prev) => prev.slice(0, plans[id].max_channels)); setErr(''); };
+
+  const submit = async () => {
+    if (!name.trim() || !company.trim() || !email.trim()) { setErr('Name, company and email are all required.'); return; }
+    if (FB_ON && password.length < 6) { setErr('Set a password of at least 6 characters for the new customer.'); return; }
+    setBusy(true); setErr('');
+    try {
+      let body = { name, company, email, plan, channels: picked };
+
+      if (FB_ON) {
+        // Create the new customer's Firebase user on a SECONDARY app instance so
+        // the current admin's session is NOT replaced. Then get that user's
+        // id_token, save the profile, and discard the secondary app.
+        const secondary = window.firebase.initializeApp(window.FIREBASE_CONFIG, 'admin-add-' + Date.now());
+        try {
+          const cred = await secondary.auth().createUserWithEmailAndPassword(email.trim(), password);
+          body.id_token = await cred.user.getIdToken();
+        } finally {
+          try { await secondary.auth().signOut(); } catch (_) {}
+          try { await secondary.delete(); } catch (_) {}
+        }
+      }
+
+      const r = await fetch(API + '/api/portal/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(await readError(r, 'Could not create the account.'));
+      const data = await r.json();
+      setCreated(data.customer);
+      onToast('Customer “' + data.customer.company + '” added');
+      load(); // refresh channel availability
+    } catch (e) {
+      setErr(FB_ON ? fbErr(e) : (e.message || 'Network error.'));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="ov" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-hd">
+          <div>
+            <div className="chan-id mono">admin · onboarding</div>
+            <div className="chan-name">Add a customer</div>
+          </div>
+          <button className="close-x" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {created ? (
+            <div>
+              <div className="login-ok" style={{ marginBottom: 16 }}>
+                ✓ Account created for {created.company}
+              </div>
+              <div className="kv"><span>Customer ID</span><b className="mono">{created.customer_id}</b></div>
+              <div className="kv"><span>Sign-in email</span><b className="mono">{created.email}</b></div>
+              <div className="kv"><span>Plan</span><b>{(created.plan_details || {}).name}</b></div>
+              <div className="kv"><span>Channels</span><b>{created.channels.length ? created.channels.join(', ') : 'none yet'}</b></div>
+              <div className="hint" style={{ marginTop: 14 }}>They can now sign in from the “Sign in” tab using this email.</div>
+              <button className="btn btn-primary login-btn" onClick={onClose}>Done</button>
+            </div>
+          ) : (
+            <div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Full name</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
+                </div>
+                <div className="field">
+                  <label>Company</label>
+                  <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Corp" />
+                </div>
+              </div>
+              <div className="field">
+                <label>Work email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+              </div>
+              {FB_ON && (
+                <div className="field">
+                  <label>Temporary password (min 6 chars)</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                </div>
+              )}
+              <div className="field">
+                <label>Plan</label>
+                <div className="plan-pick">
+                  {planList.map((p) => (
+                    <div key={p.id} className={'plan-opt' + (plan === p.id ? ' sel' : '')} onClick={() => choosePlan(p.id)}>
+                      <div className="pname">{p.name}</div>
+                      <div className="pprice">₹{(p.price_inr_month || 0).toLocaleString('en-IN')}/mo</div>
+                      <div className="pmeta">Up to {p.max_channels} channel{p.max_channels > 1 ? 's' : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="field">
+                <label>Subscribe channels ({picked.length}/{planLimit})</label>
+                <div className="chan-pick">
+                  {avail.map((c) => {
+                    const sel = picked.includes(c.channel_id);
+                    const disabled = !c.available && !sel;
+                    return (
+                      <div key={c.channel_id}
+                        className={'chan-opt' + (sel ? ' sel' : '') + (disabled ? ' disabled' : '')}
+                        onClick={() => toggleChannel(c.channel_id, disabled)}>
+                        <span className="box">{sel ? '✓' : ''}</span>
+                        <span>{c.label} <span className="mono" style={{ color: 'var(--text3)', fontSize: 11 }}>{disabled ? '(taken)' : c.channel_id}</span></span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <button className="btn btn-primary login-btn" disabled={busy} onClick={submit}>
+                {busy ? 'Creating…' : 'Create customer'}
+              </button>
+              <div className="login-err">{err}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ msg }) {
+  if (!msg) return null;
+  return <div className="toast">✓ {msg}</div>;
+}
+
+/* ─────────────────────────  APP  ───────────────────────── */
+function App() {
+  const [token, setToken] = useState(() => localStorage.getItem('qfids_portal_token'));
+  const [customer, setCustomer] = useState(null);
+  const [checking, setChecking] = useState(true);
+  const [toast, setToast] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3200);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verify = (tok) => {
+      fetch(API + '/api/portal/me', { headers: authHeaders(tok) })
+        .then((r) => { if (!r.ok) throw new Error('expired'); return r.json(); })
+        .then((c) => { if (!cancelled) { setToken(tok); setCustomer(c); setChecking(false); } })
+        .catch(() => { if (!cancelled) { localStorage.removeItem('qfids_portal_token'); setToken(null); setCustomer(null); setChecking(false); } });
+    };
+
+    if (FB_ON) {
+      // Let Firebase restore the persisted session, then use a FRESH id token
+      // (Firebase tokens expire after ~1h; getIdToken refreshes automatically).
+      const unsub = window.firebase.auth().onAuthStateChanged(async (user) => {
+        if (cancelled) return;
+        if (!user) { setChecking(false); return; }
+        try {
+          const fresh = await user.getIdToken();
+          localStorage.setItem('qfids_portal_token', fresh);
+          verify(fresh);
+        } catch (_) { setChecking(false); }
+      });
+      return () => { cancelled = true; unsub && unsub(); };
+    }
+
+    // Legacy mode
+    if (!token) { setChecking(false); return; }
+    verify(token);
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleLogin = (tok, cust) => { setToken(tok); setCustomer(cust); };
+  const handleLogout = async () => {
+    await fbSignOut();
+    localStorage.removeItem('qfids_portal_token');
+    setToken(null); setCustomer(null);
+  };
+
+  if (checking) return <div className="loading" style={{ paddingTop: 120 }}>Loading…</div>;
+  if (!token || !customer) {
+    return (
+      <div>
+        <Auth onLogin={handleLogin} onToast={showToast} />
+        <Toast msg={toast} />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <Dashboard token={token} customer={customer} onLogout={handleLogout} onAddCustomer={() => setShowAdd(true)} />
+      {showAdd && <AddCustomerModal onClose={() => setShowAdd(false)} onToast={showToast} />}
+      <Toast msg={toast} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

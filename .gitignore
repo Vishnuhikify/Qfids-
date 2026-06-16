@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.venv/
+*.egg-info/
+
+# Firebase service-account secret — never commit
+backend/firebase-service-account.json
+backend/serviceAccountKey.json

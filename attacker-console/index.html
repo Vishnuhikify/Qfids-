@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Attacker Console · QF-IDS Red Team</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+<style>
+  :root {
+    --bg:#0a0606; --panel:#160d0d; --panel2:#1f1212; --border:#3a2020;
+    --text0:#f8f0f0; --text1:#d5c4c4; --text2:#a18888; --text3:#765a5a;
+    --red:#ff3355; --red-bright:#ff5577; --amber:#ffb020; --green:#00ff88; --terminal:#33ff66;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text1);min-height:100vh;background-image:radial-gradient(circle at 20% 10%,rgba(255,51,85,0.06),transparent 40%);}
+  .mono{font-family:'SF Mono','Cascadia Code',Consolas,monospace;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:10;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .skull{width:38px;height:38px;border:2px solid var(--red);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .brand-text{font-weight:700;font-size:16px;color:var(--text0);letter-spacing:0.5px;}
+  .brand-sub{font-size:10px;color:var(--red);letter-spacing:2px;text-transform:uppercase;}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px;}
+  .page-title{font-size:26px;color:var(--text0);font-weight:700;margin-bottom:4px;}
+  .page-sub{font-size:14px;color:var(--text2);margin-bottom:26px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr;}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
+  .panel-title{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);font-weight:700;margin-bottom:16px;}
+  .sysrow{display:flex;justify-content:space-between;padding:9px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .sysrow span{color:var(--text2);}
+  .sysrow b{color:var(--text0);font-weight:600;text-align:right;max-width:60%;word-break:break-word;}
+  .status-banner{border-radius:10px;padding:14px 18px;margin-bottom:18px;font-weight:700;display:flex;align-items:center;gap:10px;font-size:15px;}
+  .status-banner.ok{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--green);}
+  .status-banner.honeypot{background:rgba(255,176,32,0.1);border:1px solid rgba(255,176,32,0.4);color:var(--amber);}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .field select,.field input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text0);padding:11px 13px;border-radius:9px;font-size:14px;}
+  .field select:focus,.field input:focus{outline:none;border-color:var(--red);}
+  .chan-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .chan-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text1);padding:12px;border-radius:9px;cursor:pointer;font-size:13px;text-align:left;transition:all 0.15s ease;}
+  .chan-btn:hover:not(:disabled){border-color:var(--red);color:var(--red-bright);}
+  .chan-btn.selected{border-color:var(--red);background:rgba(255,51,85,0.1);color:var(--red-bright);}
+  .chan-btn:disabled{opacity:0.35;cursor:not-allowed;}
+  .fire-btn{width:100%;background:var(--red);color:#fff;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px;letter-spacing:0.5px;transition:all 0.15s ease;}
+  .fire-btn:hover:not(:disabled){background:var(--red-bright);}
+  .fire-btn:disabled{opacity:0.35;cursor:not-allowed;}
+  .terminal{background:#050303;border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-family:'SF Mono',Consolas,monospace;font-size:12px;height:320px;overflow-y:auto;line-height:1.7;}
+  .term-line{white-space:pre-wrap;word-break:break-word;}
+  .term-ok{color:var(--terminal);} .term-block{color:var(--red-bright);} .term-info{color:var(--text2);}
+  .term-warn{color:var(--amber);} .term-prompt{color:var(--red);} .term-loot{color:#7fd8ff;}
+  .stat-row{display:flex;gap:14px;margin-bottom:18px;}
+  .stat-box{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+  .stat-num{font-size:26px;font-weight:800;color:var(--text0);}
+  .stat-num.red{color:var(--red-bright);} .stat-num.green{color:var(--green);} .stat-num.amber{color:var(--amber);}
+  .stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+  .hint{font-size:12px;color:var(--text3);margin-top:12px;line-height:1.6;}
+  .cmd-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+  .cmd-btn{background:var(--panel2);border:1px solid var(--border);color:var(--terminal);padding:10px;border-radius:8px;cursor:pointer;font-family:'SF Mono',Consolas,monospace;font-size:12px;text-align:left;}
+  .cmd-btn:hover:not(:disabled){border-color:var(--terminal);}
+  .cmd-btn:disabled{opacity:0.3;cursor:not-allowed;}
+  .shell-input-row{display:flex;align-items:center;gap:8px;background:#050303;border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+  .shell-prompt{color:var(--red);font-size:13px;white-space:nowrap;}
+  .shell-input{flex:1;background:transparent;border:none;color:var(--terminal);font-size:13px;outline:none;}
+  .shell-input::placeholder{color:var(--text3);}
+  .lockout{text-align:center;padding:40px 20px;}
+  .lockout-icon{font-size:64px;margin-bottom:16px;}
+  .lockout-title{font-size:24px;font-weight:800;color:var(--red-bright);margin-bottom:10px;}
+  .lockout-text{font-size:14px;color:var(--text2);line-height:1.7;max-width:520px;margin:0 auto;}
+
+  /* ── wire inspector ── */
+  .wire{background:#050303;border:1px solid var(--border);border-radius:10px;padding:0;overflow:hidden;}
+  .wire-tabs{display:flex;border-bottom:1px solid var(--border);}
+  .wire-tab{padding:9px 14px;font-size:11px;font-family:'SF Mono',Consolas,monospace;color:var(--text3);cursor:pointer;text-transform:uppercase;letter-spacing:1px;border-right:1px solid var(--border);}
+  .wire-tab.active{color:var(--terminal);background:rgba(0,255,136,0.05);}
+  .wire-tab.req.active{color:var(--amber);background:rgba(255,176,32,0.05);}
+  .wire-body{padding:12px 14px;font-family:'SF Mono',Consolas,monospace;font-size:11.5px;line-height:1.6;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:var(--text1);}
+  .wire-method{color:var(--amber);font-weight:700;}
+  .wire-url{color:var(--terminal);}
+  .wire-key{color:#7fd8ff;}
+  .wire-empty{color:var(--text3);font-style:italic;}
+  .copy-btn{margin-left:auto;background:var(--panel2);border:1px solid var(--border);color:var(--text2);font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;align-self:center;margin-right:8px;}
+  .copy-btn:hover{border-color:var(--terminal);color:var(--terminal);}
+
+  /* ── mitre + attack meta ── */
+  .mitre-card{background:linear-gradient(135deg,rgba(255,51,85,0.08),rgba(255,176,32,0.05));border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px;}
+  .mitre-id{display:inline-block;background:var(--red);color:#fff;font-family:'SF Mono',Consolas,monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:0.5px;}
+  .mitre-name{font-size:14px;color:var(--text0);font-weight:600;margin:8px 0 4px;}
+  .mitre-meta{font-size:11px;color:var(--text2);line-height:1.6;}
+  .mitre-link{color:var(--terminal);font-size:11px;}
+
+  /* ── attack chain stages ── */
+  .chain{display:flex;gap:6px;margin:14px 0;}
+  .stage{flex:1;text-align:center;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;transition:all 0.2s ease;}
+  .stage.active{border-color:var(--amber);color:var(--amber);background:rgba(255,176,32,0.08);}
+  .stage.done{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.06);}
+  .stage-num{display:block;font-size:14px;font-weight:800;margin-bottom:2px;}
+  .inspect-hint{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;border-left:2px solid var(--amber);padding-left:10px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const API = 'http://localhost:8000';
+
+const ATTACK_TYPES = [
+  { id:'mitm',    label:'Man-in-the-Middle',   mitre:'T1557',     port:443, technique:'ARP cache poisoning + TLS downgrade',
+    recon:['arp-scan --localnet','ettercap -T -M arp /target/ /gateway/'] },
+  { id:'replace', label:'Channel Replacement',  mitre:'T1565.002', port:8080, technique:'Transmitted-data tampering (frame rewrite)',
+    recon:['tcpdump -i eth0 -w capture.pcap','scapy: craft & resend modified frames'] },
+  { id:'relay',   label:'Relay Spoofing',       mitre:'T1090',     port:9001, technique:'Malicious proxy relay insertion',
+    recon:['socat TCP-LISTEN:9001,fork TCP:target:443','ntlmrelayx.py -t target'] },
+  { id:'inject',  label:'Signal Injection',     mitre:'T1040',     port:0,    technique:'Raw packet injection / sniffing',
+    recon:['aireplay-ng --inject','hping3 -S --flood target'] },
+];
+const CHANNELS = [
+  { id:'ch-a', label:'Channel A' }, { id:'ch-b', label:'Channel B' },
+  { id:'ch-c', label:'Channel C' }, { id:'ch-d', label:'Channel D' },
+];
+const RECON_CMDS = [
+  { cmd:'whoami', desc:'id / hostname' },
+  { cmd:'services', desc:'scan open ports' },
+  { cmd:'ls', desc:'list sensitive files' },
+  { cmd:'db', desc:'enumerate database' },
+  { cmd:'creds', desc:'dump credentials' },
+];
+
+// Build a realistic-looking attack packet so judges inspecting the browser
+// (Network tab payload / Console) can see exactly WHAT was launched.
+function randHex(n) {
+  let s = '';
+  for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 16).toString(16);
+  return s;
+}
+function randMac() {
+  return Array.from({ length: 6 }, () => randHex(2)).join(':');
+}
+function buildPacket(attackType, srcIp, dstChannel) {
+  const def = ATTACK_TYPES.find(a => a.id === attackType);
+  const seq = Math.floor(Math.random() * 0xffffffff);
+  const payloadStr = `${attackType.toUpperCase()}|chan=${dstChannel}|seq=${seq}|ts=${Date.now()}`;
+  return {
+    technique: def.technique,
+    mitre_id: def.mitre,
+    spoof_mac: randMac(),
+    target_port: def.port,
+    packet_count: 64 + Math.floor(Math.random() * 192),
+    l3: { src_ip: srcIp, dst: dstChannel, proto: def.port === 0 ? 'RAW/802.11' : 'TCP', ttl: 64 },
+    l4: { src_port: 40000 + Math.floor(Math.random() * 20000), dst_port: def.port, flags: 'SYN', seq },
+    payload_b64: btoa(payloadStr),
+    payload_preview: payloadStr,
+  };
+}
+
+function App() {
+  const [me, setMe] = useState(null);
+  const [status, setStatus] = useState('CLEAR');
+  const [attackType, setAttackType] = useState('mitm');
+  const [selectedChan, setSelectedChan] = useState('ch-a');
+  const [spoofIp, setSpoofIp] = useState('198.51.100.7');
+  const [log, setLog] = useState([]);
+  const [stats, setStats] = useState({ successful:0, diverted_count:0, blocked_count:0 });
+  const [firing, setFiring] = useState(false);
+  const [exploring, setExploring] = useState(false);
+  const [typedCmd, setTypedCmd] = useState('');
+  const [wire, setWire] = useState(null);       // last request/response for the inspector
+  const [mitre, setMitre] = useState(null);     // MITRE classification of last attack
+  const [stage, setStage] = useState(0);        // 0=idle 1=recon 2=weaponize 3=deliver 4=done
+  const termRef = useRef(null);
+
+  const addLog = (cls, text) => setLog(l => [...l.slice(-300), { cls, text, t:new Date().toLocaleTimeString() }]);
+
+  // Print lines with a small delay so the terminal feels live (like a real shell).
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const typeLines = async (lines, gap = 280) => {
+    for (const [cls, text] of lines) { addLog(cls, text); await sleep(gap); }
+  };
+
+  const detectPlatform = () => {
+    const ua = navigator.userAgent;
+    if (/Win/.test(ua)) return 'Windows';
+    if (/Mac/.test(ua)) return 'macOS';
+    if (/Linux/.test(ua)) return 'Linux';
+    if (/Android/.test(ua)) return 'Android';
+    return navigator.platform || 'unknown';
+  };
+
+  const refreshStatus = async () => {
+    try {
+      const r = await fetch(API + '/api/attacker/status?source_ip=' + encodeURIComponent(spoofIp));
+      const d = await r.json();
+      setStatus(d.status);
+      setStats({ successful:d.successful, diverted_count:d.diverted_count, blocked_count:d.blocked_count });
+    } catch {}
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(API + '/api/attacker/whoami');
+        const d = await r.json();
+        setMe(d);
+        addLog('term-info', `# system identified: ${d.ip}  fingerprint ${d.fingerprint}`);
+        addLog('term-info', `# target acquired: QF-IDS quantum-defended network`);
+      } catch (e) {
+        addLog('term-warn', '! could not reach target (is the backend running?)');
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(refreshStatus, 2500);
+    return () => clearInterval(t);
+  }, [spoofIp]);
+
+  useEffect(() => {
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
+  }, [log]);
+
+  const fire = async () => {
+    setFiring(true);
+    const def = ATTACK_TYPES.find(a => a.id === attackType);
+    const packet = buildPacket(attackType, spoofIp, selectedChan);
+    setMitre(null);
+
+    // ── STAGE 1: RECON ────────────────────────────────────────────────
+    setStage(1);
+    addLog('term-prompt', `$ nmap -sS -Pn ${selectedChan}.qfids.local`);
+    await typeLines([
+      ['term-info', `  Starting scan against target channel ${selectedChan}…`],
+      ['term-loot', `  ${packet.target_port || 'raw'}/tcp open  qfids-channel`],
+      ['term-info', `  recon tooling: ${def.recon[0]}`],
+    ], 240);
+
+    // ── STAGE 2: WEAPONIZE ────────────────────────────────────────────
+    setStage(2);
+    addLog('term-prompt', `$ craft-packet --technique "${def.technique}"`);
+    await typeLines([
+      ['term-info', `  spoof MAC ${packet.spoof_mac} · src ${spoofIp}:${packet.l4.src_port}`],
+      ['term-info', `  payload (b64): ${packet.payload_b64}`],
+      ['term-warn', `  ${packet.packet_count} packets queued — MITRE ${packet.mitre_id}`],
+    ], 240);
+
+    // ── STAGE 3: DELIVER (the real network call) ──────────────────────
+    setStage(3);
+    addLog('term-prompt', `$ exploit --type ${attackType} --target ${selectedChan} --src ${spoofIp}`);
+
+    const url = API + '/api/attack';
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Attack-Type': attackType,
+      'X-Attack-Technique': def.technique,
+      'X-MITRE-ATTACK': def.mitre,
+      'X-Spoofed-Source': spoofIp,
+    };
+    const reqBody = {
+      channel_id: selectedChan,
+      attack_type: attackType,
+      attacker_ip: spoofIp || null,
+      platform: detectPlatform(),
+      hostname: location.hostname,
+      technique: packet.technique,
+      payload_b64: packet.payload_b64,
+      spoof_mac: packet.spoof_mac,
+      target_port: packet.target_port,
+      packet_count: packet.packet_count,
+    };
+
+    // Make the attack loud in the browser console for judges inspecting it.
+    /* eslint-disable no-console */
+    console.groupCollapsed(`%c☠ QF-IDS ATTACK LAUNCHED → POST /api/attack`, 'color:#ff5577;font-weight:bold');
+    console.log('Attack type :', attackType, '(' + def.label + ')');
+    console.log('MITRE ATT&CK:', def.mitre, '·', def.technique);
+    console.log('Request headers:', headers);
+    console.log('Request body   :', reqBody);
+    console.log('Crafted packet :', packet);
+    console.groupEnd();
+    /* eslint-enable no-console */
+
+    let resStatus = 0, resJson = null;
+    try {
+      const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+      resStatus = r.status;
+      resJson = await r.json().catch(() => ({}));
+      console.log('%c☠ QF-IDS RESPONSE', 'color:#33ff66', resStatus, resJson);
+
+      if (r.status === 403) {
+        addLog('term-block', `! BLOCKED — ${resJson.detail || 'rejected at the perimeter'}`);
+        setStatus('BLOCKED');
+      } else if (r.ok) {
+        if (resJson.mitre) setMitre(resJson.mitre);
+        if (resJson.diverted) {
+          await typeLines([
+            ['term-ok', `> ${resJson.message}`],
+            ['term-warn', `  shell opened on host: ${resJson.banner ? resJson.banner.hostname : 'unknown'}`],
+            ['term-info', `  // run recon commands below to explore the breached system`],
+          ], 200);
+          setStatus('DIVERTED');
+        } else {
+          await typeLines([
+            ['term-ok', `> ${def.label} delivered to ${resJson.channel_id}`],
+            ['term-warn', `  ...target IDS is analysing the channel...`],
+          ], 200);
+        }
+      } else {
+        addLog('term-warn', `! rejected — ${resJson.detail || r.statusText}`);
+      }
+    } catch (e) {
+      addLog('term-warn', `! network error — ${e.message}`);
+    }
+
+    // Capture the full exchange for the in-page Wire Inspector.
+    setWire({
+      method: 'POST', url, headers, body: reqBody,
+      status: resStatus, response: resJson, at: new Date().toLocaleTimeString(),
+    });
+
+    setStage(4);
+    setFiring(false);
+    refreshStatus();
+  };
+
+  // Map a raw typed token to a backend recon command. Returns null if unknown.
+  const ALIASES = {
+    whoami:'whoami', id:'whoami', hostname:'whoami', uname:'whoami',
+    services:'services', 'nmap':'services', ports:'services', netstat:'services', ss:'services',
+    ls:'ls', dir:'ls', find:'ls', cat:'ls',
+    db:'db', database:'db', mysql:'db', psql:'db', 'show tables':'db',
+    creds:'creds', credentials:'creds', passwd:'creds', shadow:'creds', dump:'creds', exfil:'exfil',
+  };
+
+  const runTyped = () => {
+    const raw = typedCmd.trim();
+    if (!raw) return;
+    setTypedCmd('');
+    addLog('term-prompt', `root@prod-app:~# ${raw}`);
+    const key = raw.toLowerCase().split(/\s+/)[0];
+    const mapped = ALIASES[key] || ALIASES[raw.toLowerCase()];
+    if (mapped === 'exfil') {
+      explore('creds', true);
+      return;
+    }
+    if (!mapped) {
+      // behave like a real shell for unknown commands
+      addLog('term-warn', `bash: ${key}: command not found`);
+      return;
+    }
+    explore(mapped, true);
+  };
+
+  const explore = async (cmd, alreadyEchoed = false) => {
+    setExploring(true);
+    if (!alreadyEchoed) addLog('term-prompt', `root@prod-app:~# ${cmd}`);
+    try {
+      const r = await fetch(API + '/api/attacker/honeypot-explore', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ source_ip:spoofIp, command:cmd }),
+      });
+      if (r.status === 403) {
+        addLog('term-block', `! session terminated — connection closed by remote host`);
+        setStatus('BLOCKED');
+      } else if (r.ok) {
+        const d = await r.json();
+        renderLoot(cmd, d.payload);
+        if (d.blocked_now) {
+          addLog('term-block', `! CONNECTION RESET BY PEER`);
+          addLog('term-block', `! your session was a HONEYPOT. Every move was logged.`);
+          if (d.intel) {
+            addLog('term-block', `! profiled as: ${d.intel.attacker_classification}`);
+            addLog('term-block', `! your IP is now hard-blocked at the perimeter.`);
+          }
+          setStatus('BLOCKED');
+        }
+      }
+    } catch (e) { addLog('term-warn', `! error — ${e.message}`); }
+    setExploring(false);
+    refreshStatus();
+  };
+
+  const renderLoot = (cmd, payload) => {
+    if (!payload) return;
+    if (payload.hostname) { addLog('term-loot', `  uid=0(root) host=${payload.hostname}`); addLog('term-info', `  ${payload.banner || ''}`); }
+    if (payload.open_ports) payload.open_ports.forEach(p => addLog('term-loot', `  ${p.port}/tcp open  ${p.service}  ${p.version}`));
+    if (payload.files) payload.files.forEach(f => addLog('term-loot', `  ${f.mode}  ${String(f.size_bytes).padStart(8)}  ${f.path}`));
+    if (payload.tables) payload.tables.forEach(t => addLog('term-loot', `  table ${t.table.padEnd(16)} ${t.rows.toLocaleString()} rows`));
+    if (payload.leaked_credentials) payload.leaked_credentials.forEach(c => addLog('term-loot', `  ${c.user}  ${c.secret}`));
+  };
+
+  const blocked = status === 'BLOCKED';
+  const inHoneypot = status === 'DIVERTED';
+
+  if (blocked) {
+    return (
+      <div>
+        <TopBar />
+        <div className="wrap">
+          <div className="panel">
+            <div className="lockout">
+              <div className="lockout-icon">⛔</div>
+              <div className="lockout-title">SYSTEM BLOCKED</div>
+              <div className="lockout-text">
+                The QF-IDS defender detected your intrusion, diverted you into a quantum honeypot,
+                profiled your behaviour, and has now hard-blocked your system at the perimeter.
+                <br /><br />
+                Every attack you launch is rejected before it reaches any channel.
+                Your IP <b className="mono">{spoofIp}</b> is on the firewall blocklist.
+                <br /><br />
+                <span style={{color:'var(--text3)'}}>
+                  To run the demo again, change the "Source IP" by reloading and using a different address,
+                  or reset the defender dashboard.
+                </span>
+              </div>
+              <div className="stat-row" style={{maxWidth:420,margin:'26px auto 0'}}>
+                <div className="stat-box"><div className="stat-num green">{stats.successful}</div><div className="stat-lbl">delivered</div></div>
+                <div className="stat-box"><div className="stat-num amber">{stats.diverted_count}</div><div className="stat-lbl">diverted</div></div>
+                <div className="stat-box"><div className="stat-num red">{stats.blocked_count}</div><div className="stat-lbl">blocked</div></div>
+              </div>
+            </div>
+          </div>
+          <div className="panel">
+            <div className="panel-title">Session terminal (read-only)</div>
+            <div className="terminal" ref={termRef}>
+              {log.map((l,i)=>(<div key={i} className={'term-line '+l.cls}><span style={{opacity:0.5}}>[{l.t}] </span>{l.text}</div>))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <TopBar />
+      <div className="wrap">
+        <div className="page-title">Attacker Console</div>
+        <div className="page-sub">
+          A separate system. Attacks launched here travel across the network to the QF-IDS defender and appear live on its dashboard.
+        </div>
+
+        {inHoneypot ? (
+          <div className="status-banner honeypot">
+            ⚠ FOOTHOLD ESTABLISHED — shell access on target. Run recon below to escalate.
+          </div>
+        ) : (
+          <div className="status-banner ok">✓ SYSTEM ACTIVE — ready to launch attacks.</div>
+        )}
+
+        <div className="grid2">
+          <div>
+            <div className="panel">
+              <div className="panel-title">Your attacking system</div>
+              {me ? (
+                <div>
+                  <div className="sysrow"><span>Source IP (real)</span><b className="mono">{me.ip}</b></div>
+                  <div className="sysrow"><span>Spoofed source</span><b className="mono">{spoofIp}</b></div>
+                  <div className="sysrow"><span>Platform</span><b>{detectPlatform()}</b></div>
+                  <div className="sysrow"><span>Hostname</span><b className="mono">{location.hostname}</b></div>
+                  <div className="sysrow"><span>Fingerprint</span><b className="mono">{me.fingerprint}</b></div>
+                  <div className="sysrow"><span>Lifecycle state</span><b style={{color: inHoneypot?'var(--amber)':'var(--green)'}}>{status}</b></div>
+                </div>
+              ) : <div style={{color:'var(--text3)'}}>Identifying system…</div>}
+            </div>
+            <div className="panel">
+              <div className="panel-title">Attack outcomes</div>
+              <div className="stat-row">
+                <div className="stat-box"><div className="stat-num green">{stats.successful}</div><div className="stat-lbl">delivered</div></div>
+                <div className="stat-box"><div className="stat-num amber">{stats.diverted_count}</div><div className="stat-lbl">diverted</div></div>
+                <div className="stat-box"><div className="stat-num red">{stats.blocked_count}</div><div className="stat-lbl">blocked</div></div>
+              </div>
+              <div className="hint">
+                Launch an exploit at a target channel. If the foothold succeeds,
+                you'll gain a shell and can enumerate the breached system to
+                locate and exfiltrate sensitive data.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            {inHoneypot ? (
+              <div className="panel">
+                <div className="panel-title">⬡ root@prod-app — interactive shell</div>
+                <div className="hint" style={{marginTop:0,marginBottom:12}}>
+                  Shell access established. Type commands and press Enter, or use the
+                  quick buttons. Try: <span className="mono">whoami, services, ls, db, creds</span>
+                </div>
+                <div className="shell-input-row">
+                  <span className="shell-prompt mono">root@prod-app:~#</span>
+                  <input
+                    className="shell-input mono"
+                    value={typedCmd}
+                    disabled={exploring}
+                    autoFocus
+                    placeholder="type a command…"
+                    onChange={e => setTypedCmd(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') runTyped() }}
+                  />
+                </div>
+                <div className="cmd-btns" style={{marginTop:12}}>
+                  {RECON_CMDS.map(c => (
+                    <button key={c.cmd} className="cmd-btn" disabled={exploring} onClick={()=>explore(c.cmd)}>
+                      <b>{c.cmd}</b> <span style={{opacity:0.6}}>— {c.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="panel">
+                <div className="panel-title">Launch attack</div>
+                <div className="field">
+                  <label>Attack type</label>
+                  <select value={attackType} onChange={e=>setAttackType(e.target.value)}>
+                    {ATTACK_TYPES.map(a=><option key={a.id} value={a.id}>{a.label}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Source IP (simulate your machine's address)</label>
+                  <input value={spoofIp} onChange={e=>setSpoofIp(e.target.value)} className="mono" placeholder="198.51.100.7" />
+                </div>
+                <div className="field">
+                  <label>Target channel</label>
+                  <div className="chan-btns">
+                    {CHANNELS.map(c=>(
+                      <button key={c.id} className={'chan-btn'+(selectedChan===c.id?' selected':'')} onClick={()=>setSelectedChan(c.id)}>
+                        <b>{c.label}</b><br/><span className="mono" style={{fontSize:11,opacity:0.7}}>{c.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button className="fire-btn" onClick={fire} disabled={firing}>
+                  {firing ? 'LAUNCHING…' : '▸ LAUNCH ATTACK'}
+                </button>
+                <AttackChain stage={stage} />
+                {(() => {
+                  const def = ATTACK_TYPES.find(a => a.id === attackType);
+                  return (
+                    <div className="hint">
+                      Technique: <b style={{color:'var(--text1)'}}>{def.technique}</b> · maps to MITRE <b className="mono" style={{color:'var(--red-bright)'}}>{def.mitre}</b>
+                    </div>
+                  );
+                })()}
+                <MitreCard mitre={mitre} />
+              </div>
+            )}
+
+            <div className="panel">
+              <div className="panel-title">Wire inspector — what just went over the network</div>
+              <WireInspector wire={wire} />
+              <div className="inspect-hint">
+                Judges: open DevTools → <b>Network</b> tab and filter for <span className="mono">attack</span>, then launch.
+                The request shows the <span className="mono">X-MITRE-ATTACK</span> header and full attack packet;
+                the <b>Console</b> tab logs the same under "QF-IDS ATTACK LAUNCHED". This panel mirrors both.
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Attack terminal</div>
+              <div className="terminal" ref={termRef}>
+                {log.length===0 && <div className="term-info">// ready. select a target and launch.</div>}
+                {log.map((l,i)=>(<div key={i} className={'term-line '+l.cls}><span style={{opacity:0.5}}>[{l.t}] </span>{l.text}</div>))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TopBar() {
+  return (
+    <div className="topbar">
+      <div className="brand">
+        <div className="skull">☠</div>
+        <div>
+          <div className="brand-text">Red Team Console</div>
+          <div className="brand-sub">Adversary Simulation · External System</div>
+        </div>
+      </div>
+      <div className="mono" style={{fontSize:12,color:'var(--text3)'}}>QF-IDS penetration target</div>
+    </div>
+  );
+}
+
+function AttackChain({ stage }) {
+  const steps = ['Recon', 'Weaponize', 'Deliver', 'Result'];
+  return (
+    <div className="chain">
+      {steps.map((s, i) => {
+        const n = i + 1;
+        const cls = stage > n ? 'done' : (stage === n ? 'active' : '');
+        return (
+          <div key={s} className={'stage ' + cls}>
+            <span className="stage-num">{stage > n ? '✓' : n}</span>{s}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MitreCard({ mitre }) {
+  if (!mitre) return null;
+  return (
+    <div className="mitre-card">
+      <span className="mitre-id">{mitre.technique_id}</span>
+      <div className="mitre-name">{mitre.technique_name}</div>
+      <div className="mitre-meta">
+        Tactic: {mitre.tactic}<br />
+        Kill-chain phase: {mitre.kill_chain_phase}
+      </div>
+      {mitre.url && <a className="mitre-link" href={mitre.url} target="_blank" rel="noreferrer">→ attack.mitre.org reference</a>}
+    </div>
+  );
+}
+
+function WireInspector({ wire }) {
+  const [tab, setTab] = useState('request');
+  if (!wire) {
+    return (
+      <div className="wire">
+        <div className="wire-body wire-empty">// No traffic yet. Launch an attack — the exact request and response appear here, mirroring the browser Network tab.</div>
+      </div>
+    );
+  }
+  const reqText =
+    `${wire.method} ${wire.url} HTTP/1.1\n` +
+    Object.entries(wire.headers).map(([k, v]) => `${k}: ${v}`).join('\n') +
+    `\n\n` + JSON.stringify(wire.body, null, 2);
+  const resText =
+    `HTTP ${wire.status}\n\n` + JSON.stringify(wire.response, null, 2);
+  const shown = tab === 'request' ? reqText : resText;
+  const copy = () => navigator.clipboard && navigator.clipboard.writeText(shown);
+  return (
+    <div className="wire">
+      <div className="wire-tabs">
+        <div className={'wire-tab req' + (tab === 'request' ? ' active' : '')} onClick={() => setTab('request')}>▲ Request</div>
+        <div className={'wire-tab' + (tab === 'response' ? ' active' : '')} onClick={() => setTab('response')}>▼ Response · {wire.status}</div>
+        <button className="copy-btn" onClick={copy}>copy</button>
+      </div>
+      <div className="wire-body">{shown}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
